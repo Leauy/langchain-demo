@@ -247,5 +247,86 @@ Agent = LLM + Memory + Tools +planning + Action
 
 ![image-20260111212944838](.\LangChain.assets\image-20260111212944838.png)
 
+智能体核心要素被细化为以下模块
 
+1、大模型（LLM）作为“大脑”：提供推理、规划和知识理解能力，是AI Agent的决策中枢。
+
+大脑主要由一个大语言模型LLM组成，承担着信息处理和决策等功能，并可以呈现推理和规划的过程，能很好的应对未知任务。
+
+2、记忆（Memory）
+
+记忆机制能让智能体在处理重复工作时调用以前的经验，从而避免用户进行大量重复交互。
+
+- 短期记忆：存储单词对话周期的上下文信息，属于临时信息存储机制。受限于模型的上下文窗口长度。
+
+  ![image-20260111213903362](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111213903362.png)
+
+  ![image-20260111213922597](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111213922597.png)
+
+- 长期记忆：可以横跨多个任务或者时间周期，可以存储并调用核心知识，非即时任务。
+
+  长期记忆，可以通过模型参数微调（固化知识）、知识图谱（结构化语义网络）或者向量数据库（相似性检索）方式实现
+
+3、工具使用（tool use）：调用外部工具（如API 数据库）扩展能力边界
+
+![image-20260111214224923](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111214224923.png)
+
+4、规划决策（Planning）：通过任务分解、反思、自省框架实现复杂任务处理。例如，利用思维链（Chain of Thought）将目标拆解为子任务、并通过反馈优化策略。
+
+![image-20260111214358331](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111214358331.png)
+
+5、行动（Action）：实际决策的模块，涵盖软件接口操作（如自动订票）和物理交互（如机器人执行搬运），比如：检索、推理、编程等。
+
+智能体会形成完整的计划流程。例如先读取以前工作的经验和记忆，之后规划子目标并使用相应工具去处理问题，最后输出给用户并完成反思。
+
+#### 3.3 大模型应用开发的4个场景
+
+##### 场景1：纯Prompt
+
+- prompt是操作大模型的唯一接口
+- 当人看：你说一句，ta回一句，。。。
+
+![image-20260111215039182](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111215039182.png)
+
+##### 场景2： Agent + Function Calling
+
+- Agent： AI 主动提要求
+- Function Calling： 需要对接外部系统时，AI要求执行某个函数
+- 当人看：你问ta【我明天去杭州出差，是否需要带伞？】，ta让你先看天气预报，你看了告诉ta，ta再告诉你要不要带伞
+
+![image-20260111215144834](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111215144834.png)
+
+##### 场景3：RAG（Retrieval - Augmented Generation）
+
+RAG：需要补充领域知识时使用
+
+- Embeddings：把文字转换为更易于相似度计算的向量
+- 向量数据库：存储向量，便于查询
+- 向量搜索：根据输入向量，找到相似的向量
+
+举例：考试答题时，到书上找相关内容，再结合题目组成答案。
+
+![image-20260111221257388](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111221257388.png)
+
+##### 场景4：Fine-tuning（精调/微调）
+
+举例：努力学习考试内容，长期记住，活学活用
+
+![image-20260111221512080](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111221512080.png)
+
+特定：成本最高；在前面的方式解决不了问题的情况下，在使用。
+
+##### 如何选择
+
+面对一个需求，如何开始，如何选择技术方案？
+
+![image-20260111221800792](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260111221800792.png)
+
+注意：其中最容易被忽略的，是准备测试数据。
+
+下面，我们重点介绍下大模型应用的开发两类：基于RAG的架构，基于Agent的架构。
+
+
+
+### 4、LangChain的核心组件
 
