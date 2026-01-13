@@ -57,7 +57,7 @@ sk-f16240a40d4f421880bf04e6e90c5163
 
 #### 
 
-LangChain更为方便解决浙西问题而生的。比如：大模型默认不能联网，如果需要联网，用langchain。
+LangChain更为方便解决这些问题而生的。比如：大模型默认不能联网，如果需要联网，用langchain。
 
 问题2：我们可以使用GPT或者Deepseek等模型的API进行开发，为何需要langhain这样的框架？
 
@@ -329,4 +329,123 @@ RAG：需要补充领域知识时使用
 
 
 ### 4、LangChain的核心组件
+
+学习LangChain的最简单直接的方法就是阅读官方文档。
+
+https://python.langchain.com/v0.1/docs/modules
+
+通过文档目录我们可以看到，LangChain构成的核心组件。
+
+![image-20260113233722320](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260113233722320.png)
+
+#### 4.1 一个问题引发的思考
+
+如果要组织一个AI应用，开发者一般需要什么？
+
+- 提示词模板的构建，不仅仅只包含用户输入
+- 模型和返回，参数设置，返回内容的格式化输出
+- 知识库查询，这里会包含文档加载，切割，以及转化为词嵌入Embedding向量
+- 其他第三方工具调用，一般包括天气查询，Google搜索，一些自定义的接口能力调用
+- 记忆获取，每一个对话都有上下文，在开启对话之前总得获取到之前的上下文
+
+#### 4.2 核心组件的概述
+
+LangChain的核心组件涉及六大模块，这六大模块提供了一个全面且强大的框架，使得开发者者能够创建复杂、高效且用户有好的基于大模型的应用。
+
+![image-20260113234324054](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260113234324054.png)
+
+#### 4.3 核心组件的说明
+
+##### 核心模块1： MODEL/IO
+
+这个模块使用的最多，也最简单。
+
+Model/IO：标准化各个大模型的输入和输出，包含输入模板，模型本身和格式化输出。以下是使用语言模型从输入到输出的基本流程。
+
+![image-20260113234558959](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260113234558959.png)
+
+以下是对每一块的总结：
+
+- format（格式化）：即指代prompts template，通过模板管理大模型的输入。将原始数据格式化成模型可以处理的形式，插入到一个模板问题中，然后送入模型进行处理。
+- Predict（预测）：即代指Models，使用通用接口调用不同的大语言模型，接受被送进来的问题，然后基于这个问题进行预测或生成回答。
+- Parse（生成）：即代指Output Parser部分，用来从模型的推理中提取信息，并按照预先设定好的模板来规范化输出。比如，格式化成一个结构化的JSON对象。
+
+##### 核心模块2： Chains
+
+Chain：链条，用于将多个模块串联起来组成一个完整的流程，是LangChain框架中最重要的模块。
+
+例如：一个Chain可能包括一个Prompt模板，一个语言模型，一个输出解析器，他们一起工作以处理用户输入，生成响应并处理输出。
+
+常见的Chain类型
+
+- LLMChain：最基础的模型调用链
+- SequentialChain：多个链串联执行
+- RouterChain：自动分析用户的需求，引导最合适的链
+- RetrievalQA：结合向量数据库进行问答的链
+
+##### 核心模块3： Memory
+
+Memory：记忆模块，用于保存对话历史或者上下文信息，以便在后续对话中使用
+
+常见的Memory类型：
+
+- ConversationBufferMemory：保存完整的对话历史
+- ConversationSummaryMemory：保存精简摘要的对话历史
+- ConversationSummaryBufferMemory：混合型记忆机制，兼具上面两个类型的特点
+- VectorStoreRetrieverMemory：保存对话历史存储在向量数据库中
+
+##### 核心模块4：Agents
+
+Agents，对应智能体，是LangChain的高阶能力，它可以自主选择工具，并规划执行步骤
+
+Agent的关键组成：
+
+- AgentType：定义决策逻辑的工作量模式
+- Tool：一些内置的功能模块，如API调用，引擎搜索，文本处理，数据查询等工具。Agents通过这些工具来执行特定的功能
+- AgentExecutor：用来运行智能体并执行其决策的工具，负责协调智能体的决策和实际的工具执行。
+
+目前最热门的智能体开发实践，未来能够真正实现通用人工智能的落地方案。这里的Agent，就会涉及到前面讲的memory以及tools。
+
+##### 核心模块5： Retrieval
+
+Retrieval：对应着RAG，检索外部数据，然后在执行生成步骤时将其传递到LLM。步骤包括文档加载，切割，embedding等。
+
+![image-20260114000313300](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260114000313300.png)
+
+
+
+- source：数据源，即大模型可以识别的多种类型的数据：视频、图片、文本、代码、文档等
+- Load：负责将来自不同的数据源的非结构化数据，加载为文档对象
+- Transform：负责对加载的 文档进行转换处理，比如将文本拆分成具有语义意义的小块。
+- Embed：  将文本编码转为向量的能力。一种用于嵌入文档，另一种用于嵌入查询
+- Store：将向量化的数据进行存储
+- Retrieval：从大规模文本框中检索和查询相关的文本段落
+
+图中绿色表示入库存储前的操作。
+
+##### 核心模块6： Callbacks
+
+Callbacks：回调机制，允许连接到LLM应用程序的各个阶段，可以监控和分析LangChain的运行情况，比如日志记录，监控，流传输以及优化性能。
+
+回调函数，对于程序员不陌生，这个函数允许我们在LLM的各个阶段使用各种各样的钩子，从而实现日志的监控、记录以及流式传输的功能
+
+#### 4.4 小结
+
+- Model/IO 模块使用多，简单
+- Chains 模块：最重要
+- Retrieval模块、agents模块，大模型的注意落地场景。
+
+在这个基础上，其他组件要么是他们的辅助，要么只是完成常规应用程序的任务。
+
+辅助：比如向量数据库的分块和嵌入，用于追踪、观测的callbacks
+
+任务：比如tools、memory
+
+![image-20260114001443030](E:\learn\AI-demo\langchain-demo\LangChain.assets\image-20260114001443030.png)
+
+我们要做的就是一个一个module的去攻破，最后将他们融会贯通。
+
+### 5、LangChain的helloworld
+
+#### 5.1 获取大模型
 
