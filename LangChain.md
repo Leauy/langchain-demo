@@ -449,3 +449,312 @@ Callbacks：回调机制，允许连接到LLM应用程序的各个阶段，可�
 
 #### 5.1 获取大模型
 
+.env
+
+```shell
+#DEEPSEEK_API_KEY=sk-79a625372f1c47f394b0818709b28216
+#DEEPSEEK_BASE_URL=https://api.deepseek.com
+OPENAI_API_KEY=sk-346d6c9bc67d4a25af518ea75236f03e
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+```
+
+
+
+```python3
+
+import dotenv
+import os
+
+dotenv.load_dotenv()
+
+from langchain_openai import ChatOpenAI
+
+client = ChatOpenAI(model='kimi-k2.5',api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'), streaming=True)
+
+mm = client.invoke('大模型是什么？')
+print(mm)
+```
+
+#### 5.2 使用提示词模板
+
+```python
+import os
+import dotenv
+
+dotenv.load_dotenv()
+
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(model='kimi-k2.5',api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
+
+prompt = ChatPromptTemplate.from_messages([
+    ('system', '你是网络设备运维专家，熟悉各种厂商、型号的设备配置'),
+    ('user', '{input}')
+])
+
+chain = prompt | llm
+message = chain.invoke({'input': '华三的防火墙增加一个新的防火墙策略'})
+print(message)
+```
+
+#### 5.3 使用输出解析器
+
+```python
+import os
+import dotenv
+from langchain_core.output_parsers import JsonOutputParser
+
+dotenv.load_dotenv()
+
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(model='kimi-k2.5',api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
+
+prompt = ChatPromptTemplate.from_messages([
+    ('system', '你是网络设备运维专家，熟悉各种厂商、型号的设备配置, 用JSON格式回复，问题用question，回答用answer'),
+    ('user', '{input}')
+])
+
+output_parser = JsonOutputParser()
+
+chain = prompt | llm | output_parser
+message = chain.invoke({'input': '华三的防火墙增加一个新的防火墙策略'})
+print(message)
+```
+
+#### 5.4 使用向量存储
+
+使用简单的本地向量存储FAISS
+
+安装FAISS
+
+```shell
+pip install faiss-cpu
+pip install langchain_community
+```
+
+可能存在的坑 切片长度，一次能处理的切片数量
+
+```python
+import traceback
+from http.client import responses
+
+import dotenv, os
+from langchain_core.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+
+dotenv.load_dotenv()
+
+from langchain_core.embeddings import Embeddings
+from dashscope import MultiModalEmbedding
+from langchain_community.vectorstores import FAISS
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+
+
+class QwenEmbedding(Embeddings):
+    def embed_documents(self, texts):
+        vectors = []
+        BATCH_SIZE = 16  # <=20
+
+        for i in range(0, len(texts), BATCH_SIZE):
+            batch = texts[i:i + BATCH_SIZE]
+
+            resp = MultiModalEmbedding.call(
+                model="multimodal-embedding-v1",
+                input=batch,
+                api_key=os.getenv("DASHSCOPE_API_KEY")
+            )
+
+            embs = resp["output"]["embeddings"]
+            vectors.extend([e["embedding"] for e in embs])
+
+        return vectors
+
+    def embed_query(self, text):
+        resp = MultiModalEmbedding.call(
+            model="multimodal-embedding-v1",
+            input=[text],
+            api_key=os.getenv("DASHSCOPE_API_KEY")
+        )
+        return resp["output"]["embeddings"][0]["embedding"]
+
+
+def process_text_file(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return [Document(page_content=f.read())]
+
+
+docs = process_text_file("E:/learn/AI-demo/langchain-demo/LangChain.md")
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+documents = splitter.split_documents(docs)
+try:
+    embedding_model = QwenEmbedding()
+    vector = FAISS.from_documents(documents, embedding_model)
+    mm = vector.similarity_search("langchain smith")
+    print(mm)
+except Exception as e:
+    traceback.print_exc()
+
+```
+
+
+
+#### 5.5 RAG检索增强生成
+
+
+
+```python
+import traceback
+from http.client import responses
+
+import dotenv, os
+from langchain_core.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+
+dotenv.load_dotenv()
+
+from langchain_core.embeddings import Embeddings
+from dashscope import MultiModalEmbedding
+from langchain_community.vectorstores import FAISS
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+
+
+class QwenEmbedding(Embeddings):
+    def embed_documents(self, texts):
+        vectors = []
+        BATCH_SIZE = 16  # <=20
+
+        for i in range(0, len(texts), BATCH_SIZE):
+            batch = texts[i:i + BATCH_SIZE]
+
+            resp = MultiModalEmbedding.call(
+                model="multimodal-embedding-v1",
+                input=batch,
+                api_key=os.getenv("DASHSCOPE_API_KEY")
+            )
+
+            embs = resp["output"]["embeddings"]
+            vectors.extend([e["embedding"] for e in embs])
+
+        return vectors
+
+    def embed_query(self, text):
+        resp = MultiModalEmbedding.call(
+            model="multimodal-embedding-v1",
+            input=[text],
+            api_key=os.getenv("DASHSCOPE_API_KEY")
+        )
+        return resp["output"]["embeddings"][0]["embedding"]
+
+
+def process_text_file(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return [Document(page_content=f.read())]
+
+
+docs = process_text_file("E:/learn/AI-demo/langchain-demo/LangChain.md")
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+documents = splitter.split_documents(docs)
+try:
+    embedding_model = QwenEmbedding()
+    vector = FAISS.from_documents(documents, embedding_model)
+    mm = vector.similarity_search("langchain smith")
+    print(mm)
+except Exception as e:
+    traceback.print_exc()
+
+```
+
+#### 5.6 使用Agent
+
+```python
+import traceback
+from http.client import responses
+
+import dotenv, os
+from langchain_classic.agents import AgentExecutor
+from langchain_community.agent_toolkits import create_openapi_agent
+from langchain_core.prompts import PromptTemplate
+from langchain_core.tools import create_retriever_tool
+from langchain_openai import ChatOpenAI
+from torch import hub
+
+dotenv.load_dotenv()
+
+from langchain_core.embeddings import Embeddings
+from dashscope import MultiModalEmbedding
+from langchain_community.vectorstores import FAISS
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+
+
+class QwenEmbedding(Embeddings):
+    def embed_documents(self, texts):
+        vectors = []
+        BATCH_SIZE = 16  # <=20
+
+        for i in range(0, len(texts), BATCH_SIZE):
+            batch = texts[i:i + BATCH_SIZE]
+
+            resp = MultiModalEmbedding.call(
+                model="multimodal-embedding-v1",
+                input=batch,
+                api_key=os.getenv("DASHSCOPE_API_KEY")
+            )
+
+            embs = resp["output"]["embeddings"]
+            vectors.extend([e["embedding"] for e in embs])
+
+        return vectors
+
+    def embed_query(self, text):
+        resp = MultiModalEmbedding.call(
+            model="multimodal-embedding-v1",
+            input=[text],
+            api_key=os.getenv("DASHSCOPE_API_KEY")
+        )
+        return resp["output"]["embeddings"][0]["embedding"]
+
+
+def process_text_file(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return [Document(page_content=f.read())]
+
+
+docs = process_text_file("E:/learn/AI-demo/langchain-demo/LangChain.md")
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+documents = splitter.split_documents(docs)
+try:
+    embedding_model = QwenEmbedding()
+    vector = FAISS.from_documents(documents, embedding_model)
+    mm = vector.similarity_search("langchain smith")
+    print(mm)
+    question = 'LangGraph有什么功能？'
+    retriver = vector.as_retriever(search_kwargs={'k': 3})
+    docs = retriver.invoke(question)
+
+    retriver_tool = create_retriever_tool(
+        retriver,
+        "CivilCodeRetriver",
+        '搜索LangGraph有什么功能，关于LangGraph相关的任何问题，必须使用此工具'
+
+    )
+    llm = ChatOpenAI(model='kimi-k2.5', api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
+    tools = [retriver_tool]
+    prompt = hub.pull('hwchase17/openai-functions-agent')
+    agent = create_openapi_agent(llm, tools, prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+    agent_executor.invoke(question)
+except Exception as e:
+    import pdb;pdb.set_trace()
+    traceback.print_exc()
+
+```
+
