@@ -251,3 +251,180 @@ max_tokensL建议设置
 - .env配置文件方式
 
 ![image-20260209000646263](E:\learn\AI-demo\langchain-demo\LangChain-ModelIO.assets\image-20260209000646263.png)
+
+### 2.4 角度3出发：各平台API的调用举例
+
+#### 2.4.1 OpenAI官方API
+
+考虑到OpenAI在国内访问以及充值的不便，我们仍然使用closeAI网址 https://www.closeai-asia.com 注册和充值，具体费用自理。
+
+##### 调用非对话模型
+
+```python
+import dashscope
+from dashscope import Generation
+import os
+import dotenv
+
+dotenv.load_dotenv()
+dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
+
+resp = Generation.call(
+    model="qwen-plus-2025-12-01",
+    prompt="把下面的一段话翻译成中文：Actions speak louder than words."
+)
+
+print(resp.output.text)
+```
+
+##### 调用对话模型
+
+```python
+import dashscope
+import os
+import dotenv
+
+dotenv.load_dotenv()
+dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
+
+
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx"
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+
+completion = client.chat.completions.create(
+    # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
+    model="qwen-plus-2025-12-01",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "把下面的一段话翻译成中文：Actions speak louder than words."},
+    ]
+)
+print(completion.choices[0].message)
+```
+
+
+
+### 2.5 如何选择合适的大模型？
+
+#### 2.5.1 有没有最好的大模型
+
+凡是问那个大模型最好的？都是不懂得
+
+不妨反问：无论做什么，有都表现更好的员工的吗
+
+没有最好的大模型，只有最适合的大模型
+
+基础模型选型，合规和安全时首要考量因素
+
+为什么不要依赖榜单？
+
+- 榜单以及被应试教育污染，还算值得相信的榜单：LMSYS Chatbot Arena LeaderBoard
+- 榜单体现的时整体能力，放到一件具体事情上，排名低的可能反倒更好
+- 榜单体现不出成本差异
+
+
+
+本课程主要以OpenAI为例展开后续的课程。因为：
+
+- OpenAI最流行，即便国内也是如此
+- OpenAI最先进，别的模型有的能力，OpenAI一定都i有。OpenAI有的，其他模型不一定有
+- 其他模型都在追赶和模仿OpenAI
+
+学活OpenAI，其他模型触类旁通反之不一定。
+
+#### 2.5.2 小结：获取大模型的标准方式
+
+后续的各种模型测试，都基于以下的模型展开
+
+**非对话模型**
+
+```python
+import dashscope
+from dashscope import Generation
+import os
+import dotenv
+
+dotenv.load_dotenv()
+dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
+
+resp = Generation.call(
+    model="qwen-plus-2025-12-01",
+    prompt="把下面的一段话翻译成中文：Actions speak louder than words."
+)
+
+print(resp.output.text)
+```
+
+**对话模型**
+
+```python
+import dashscope
+import os
+import dotenv
+
+dotenv.load_dotenv()
+dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
+
+
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx"
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+
+completion = client.chat.completions.create(
+    # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
+    model="qwen-plus-2025-12-01",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "把下面的一段话翻译成中文：Actions speak louder than words."},
+    ]
+)
+print(completion.choices[0].message)
+```
+
+## 3、Model I/O之调用模型2
+
+### 3.1 关于对话模型的Message（消息）
+
+聊天模型，除了将字符串作为输入外，还可以使用聊天消息作为输入，并返回聊天消息作为输出。
+
+Langchain内置消息的类型：
+
+- System Message： 设定AI行为规则或者背景信息，比如设定AI的初始状态、行为模式、或对话的总体目标。比如作为一个代码专家，或者返回JSON格式。通常作为消息序列中的第一个传递
+- HumanMessage： 表示来自用户输入，比如实现一个快速排序的方法
+- AIMessage：存储AI回复的内容，可以是文本，也可以时调用工具的请求
+- ChatMessage：可以自定义角色的通用消息类型
+- FuctionMessage/ToolMessage：函数调用/工具消息，用于函数调用结果的消息类型
+
+注意
+FuctionMessage/ToolMessage分别是在函数调用和工具调用场景下才会使用的特殊信息类型，HumanMessage、AIMessage和SystemMessage才是最常用的消息类型。
+
+### 3.2 关于上下文记忆
+
+### 3.3 关于模型调用的方法
+
+invoke() /stream()：阻塞/流式
+
+batch(): 批量调用
+
+ainvoke() / astream() / abatch(): 异步方式调用
+
+
+
+在langchain中，语言模型是的输出分为了两种主要的模式：流四输出和非流式输出
+
+下面2个场景
+
+- 非流式输出这是langchain与LLM交互时默认的行为，是最简单、最稳定的语言模型调用方式。当用户发出请求后，系统在后台等待模型生成完整响应。然后一次性将全部结果返回
+- 流式输出：一种更具交互感的模型输出方式，用户不再需要等待完整答案，而是能看到模型逐个tolen地实时返回内容。
+
