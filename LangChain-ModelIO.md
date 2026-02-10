@@ -413,18 +413,140 @@ FuctionMessage/ToolMessage分别是在函数调用和工具调用场景下才会
 
 ### 3.3 关于模型调用的方法
 
-invoke() /stream()：阻塞/流式
+为了尽可能简化自定义链的创建，我们实现了一个Runnable的协议。许多哟的LangChain组件实现了Runnable协议，包括聊天模型】提示词模板、输出解析器、检索器、代理（智能体）等。
 
-batch(): 批量调用
+Runnable定义的公共的调用方法如下：
 
-ainvoke() / astream() / abatch(): 异步方式调用
+- invoke： 处理单条输入，等待LLM完全推理完成后再返回调用结果
+- stream：流式响应，逐字输出LLM的响应结果
+- batch：处理批量输入
 
+这些也有相应的异步方法，应该与asyncio 和 await 语法一起以实现并发：
 
+- astream：异步流式响应
+- ainvoke：异步处理单条输入
+- abatch：异步处理批量输入
+- astream_log:异步流式返回中间步骤以及最终响应
+- astream_events: 测试版异步流式返回链中发生的事件（在langchain-core 0.1.4 中可用）
 
-在langchain中，语言模型是的输出分为了两种主要的模式：流四输出和非流式输出
+#### 3.3.1 流式输出和非流式输出
+
+在langchain中，语言模型是的输出分为了两种主要的模式：流式输出和非流式输出
 
 下面2个场景
 
 - 非流式输出这是langchain与LLM交互时默认的行为，是最简单、最稳定的语言模型调用方式。当用户发出请求后，系统在后台等待模型生成完整响应。然后一次性将全部结果返回
 - 流式输出：一种更具交互感的模型输出方式，用户不再需要等待完整答案，而是能看到模型逐个tolen地实时返回内容。
+
+#### 3.3.2 批量调用
+
+```python
+import os
+
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+
+import dotenv
+
+dotenv.load_dotenv()
+
+
+client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'), base_url=os.getenv('OPENAI_API_URL'),
+                    model='qwen3-max-2026-01-23', streaming=True)
+
+message1 = [SystemMessage(content='你是一个专业的骨科主任'), HumanMessage(content='小拇指骨折了，已经7周了，目前骨折线还是很明显，该怎么办？')]
+message2 = [SystemMessage(content='你是一个专业的骨科主任'), HumanMessage(content='恒古骨伤愈合剂这个能行吗？')]
+message3 = [SystemMessage(content='你是一个专业的骨科主任'), HumanMessage(content='恒古骨伤愈合剂这个能行吗，每次喝完口特别渴，还有点头晕，正常吗？')]
+
+messages = [message1, message2, message3]
+for message in client.batch(messages):
+    print(message.content, end='', flush=True)
+
+
+```
+
+#### 3.3.3 同步调用和异步调用
+
+同步调用：阻塞式，顺序执行
+
+异步调用
+
+允许程序在等待某些操作完成时继续执行其他的任务，而不是阻塞等待。这在处理IO操作（如网络请求、文件读写等）时特别有用，可以显著提高程序的效率和响应性。
+
+举例：
+
+```python
+import asyncio
+import os
+import time
+
+from langchain_openai import ChatOpenAI
+import dotenv
+
+dotenv.load_dotenv()
+
+async def model_call():
+
+    client = ChatOpenAI(
+        api_key=os.getenv('OPENAI_API_KEY'),
+        base_url=os.getenv('OPENAI_API_URL'),
+        model='qwen3-max-2026-01-23',
+        streaming=False
+    )
+    for message in client.stream(
+            '小拇指骨折了，已经7周了，目前骨折线还是很明显，该怎么办？医生开了一些药促进骨骼愈合的,目前有吃一些钙片，牛奶，鸡蛋，平时只有在敲键盘的时候偶尔会去 把支架拆掉，平时都是带着的，几乎没怎么用力'):
+        print(message.content, end='', flush=True)
+
+async def other_task():
+    await asyncio.sleep(1)
+    print('other_task finished')
+
+
+async def main():
+    start = time.time()
+    await asyncio.gather(model_call(), other_task())
+    end = time.time()
+    print(end - start)
+    return 'cost time: {}'.format(end - start)
+
+if __name__ == '__main__':
+    result = asyncio.run(main())
+    print(result)
+```
+
+使用asyncio.gather()并行执行时，理想情况下，两个任务几乎同时开始，他们的执行时间将重叠。如果两个任务的执行时间相同（5s）那么总的执行时间应该接近单个任务的执行时间，而不是两者之和。
+
+
+
+异步调用之ainvoke
+
+验证ainvoke 是否时异步？
+
+```python
+import os
+import inspect
+
+from langchain_openai import ChatOpenAI
+import dotenv
+
+dotenv.load_dotenv()
+
+client = ChatOpenAI(
+    api_key=os.getenv('OPENAI_API_KEY'),
+    base_url=os.getenv('OPENAI_API_URL'),
+    model='qwen3-max-2026-01-23',
+    streaming=False
+)
+
+
+print('invoke 是协程函数' , inspect.iscoroutinefunction(client.invoke))
+print('ainvoke 是协程函数' , inspect.iscoroutinefunction(client.ainvoke))
+
+invoke 是协程函数 False
+ainvoke 是协程函数 True
+```
+
+
+
+
 
