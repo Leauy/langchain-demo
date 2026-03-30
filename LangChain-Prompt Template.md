@@ -335,7 +335,7 @@ print(client.invoke(m).content)
 
 体会：zeroshot会导致低质量回答
 
-FewShotPromptTemplate  的使用
+#### 3.5.2 FewShotPromptTemplate  的使用
 
 ```python
 import os
@@ -383,7 +383,107 @@ print(chat_model.invoke(f.invoke({'input': '西安刮风不'})).content)
 #西安
 ```
 
+#### 3.5.3 FewShotChatMessagePromptTemplate  的使用
+
+```python
+import os
+
+import  dotenv
+from langchain_core.prompts import FewShotPromptTemplate, ChatPromptTemplate, PromptTemplate
+from langchain_openai import ChatOpenAI
+
+
+dotenv.load_dotenv()
+
+
+chat_model = ChatOpenAI(api_key=os.getenv('DASHSCOPE_API_KEY'), base_url=os.getenv('DASHSCOPE_BASE_URL'),  model='qwen3-max-2026-01-23')
+
+prompt = PromptTemplate.from_template(
+    template='输入如下：{input}, 输出如下：{output}',
+)
+
+examples = [
+    {
+        'input': '北京天气如何？', 'output': '北京',
+    },
+    {
+        'input': '南京下雨吗？', 'output': '南京',
+    },
+    {
+         'input': '武汉热吗？', 'output': '武汉',
+    }
+]
+
+f = FewShotPromptTemplate(
+    example_prompt=prompt,
+    examples=examples,
+    input_variables=['input'],
+    suffix='输入如下：{input}, 输出如下：',
+)
+
+print(f.invoke({'input': '西安刮风不'}))
+
+print(chat_model.invoke(f.invoke({'input': '西安刮风不'})))
+print(chat_model.invoke(f.invoke({'input': '西安刮风不'})).content)
+
+#text='输入如下：北京天气如何？, 输出如下：北京\n\n输入如下：南京下雨吗？, 输出如下：南京\n\n输入如下：武汉热吗？, 输出如下：武汉\n\n输入如下：西安刮风不, 输出如下：'
+#content='西安' additional_kwargs={'refusal': None} response_metadata={'token_usage': {'completion_tokens': 1, 'prompt_tokens': 58, 'total_tokens': 59, 'completion_tokens_details': None, 'prompt_tokens_details': None}, 'model_provider': 'openai', 'model_name': 'qwen3-max-2026-01-23', 'system_fingerprint': None, 'id': 'chatcmpl-ccb97c65-5eeb-9bd2-9ed0-a06809c08453', 'finish_reason': 'stop', 'logprobs': None} id='lc_run--019c529e-c8c2-7812-85d8-388d5fed89ad-0' tool_calls=[] invalid_tool_calls=[] usage_metadata={'input_tokens': 58, 'output_tokens': 1, 'total_tokens': 59, 'input_token_details': {}, 'output_token_details': {}}
+#西安
+```
+
+#### 3.5.4 Example selectors(示例选择器)
+
+ 前面FewShotPromptTemplate的特点时，无论输入什么问题，都会包含全部示例。在实际开发中，我们可以根据当前输入，使用示例选择器，从大量候选示例中选取最相关的示例子集。
+
+使用的好处：避免盲目传递所有示例，减少token消耗的同时，还可以提升输出效果
+
+示例选择策略：语义相似选择、长度选择、最大边际相关示例选择等
+
+- 语义相似选择：通过余玹相似度等度量方式评估语义相关性，选择与输入问题最相似的K个示例
+- 长度选择：根据输入文本长度，从候选示例中筛选出长度最匹配的示例。增强模型对文本结构的理解。比语义相似度计算更加轻量，适合对响应速度要求高的场景。
+- 最大边际相关示例选择：优先选择与输入问题语义相似的示例；同时，通过惩罚机制避免返回同质化的内容。
+
+示例：
+
+从配置文件中加载提示词
+
+```json
+{
+  "_type": "prompt",
+  "input_variables": ["name", "what"],
+  "template": "请给{name}讲一个关于 {what}的故事"
+}
+```
 
 
 
+```yaml
+_type:
+  "prompt"
+input_variables:
+  ["name", "what"]
+template:
+  "给{name}讲一个关于{what}的故事"
+```
+
+
+
+```python
+import os
+
+import dotenv
+from langchain_core.prompts import load_prompt
+
+
+
+
+
+if __name__ == '__main__':
+    dotenv.load_dotenv()
+    prompt = load_prompt("./prompt.yaml", encoding="utf-8")
+    print(prompt.format_prompt(name="刘启陌", what="sb"))
+
+    prompt1 = load_prompt("./prompt.json", encoding="utf-8")
+    print(prompt1.format_prompt(name="liuyang", what="123456"))
+```
 

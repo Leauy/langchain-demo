@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run:*)",
+      "Bash(uv add:*)",
+      "Bash(C:/Users/99291/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.2/scripts/start-server.sh --project-dir \"E:/learn/AI-demo/langchain-demo\")",
+      "Read(//c/Users/99291/.claude/plugins/cache//**)",
+      "Read(//c/Users/99291/.claude/plugins/cache/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:54321/ui-design.html)",
+      "Bash(pip install:*)",
+      "Bash(pip list:*)",
+      "Bash(uv pip:*)",
+      "Bash(python -c \"from backend.main import app; print\\(''Backend imports OK''\\)\")",
+      "Bash(pip config:*)",
+      "Bash(python:*)",
+      "Bash(.venv/Scripts/python -c \"from langchain_openai import OpenAIEmbeddings, ChatOpenAI; print\\('LangChain imports OK'\\)\" 2>&1)",
+      "Bash(../.venv/Scripts/python -c \"from langchain_openai import OpenAIEmbeddings, ChatOpenAI; print\\('LangChain imports OK'\\)\" 2>&1)",
+      "Bash(../.venv/Scripts/python -c \"from backend.main import app; print\\('Backend imports OK'\\)\" 2>&1)",
+      "Bash(../.venv/Scripts/python init_vectordb.py --sample 2>&1)"
+    ]
+  }
+}
